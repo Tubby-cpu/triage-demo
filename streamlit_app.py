@@ -1,10 +1,9 @@
 import streamlit as st
 from datetime import datetime
-import requests
 import base64
 
 # Page config
-st.set_page_config(page_title="Discovery Triage Pilot", page_icon="🏥", layout="centered")
+st.set_page_config(page_title="Discovery Triage Pilot Demo", page_icon="🏥", layout="centered")
 
 st.markdown("""
 <style>
@@ -14,8 +13,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<p class='big-font'>Discovery Triage Pilot</p>", unsafe_allow_html=True)
-st.markdown("<p class='purple'>SATS (Manual-Based) • AI Assist • HealthID • Report</p>", unsafe_allow_html=True)
+st.markdown("<p class='big-font'>Discovery Triage Pilot Demo</p>", unsafe_allow_html=True)
+st.markdown("<p class='purple'>SATS (Manual-Based) • AI Assist Demo • HealthID • Report</p>", unsafe_allow_html=True)
 
 # Session state
 if "history" not in st.session_state: st.session_state.history = []
@@ -51,9 +50,6 @@ with st.sidebar:
     for e in st.session_state.history[-5:]:
         st.caption(f"{e['name']} • {e['priority']} • {e['time']}")
 
-    st.divider()
-    groq_key = st.text_input("Groq API Key for AI", type="password")
-
 # Main form
 if not st.session_state.patient:
     st.info("Load a patient to begin triage.")
@@ -76,8 +72,8 @@ temp = st.slider("Temperature (°C)",30.0,43.0,37.0,0.1)
 avpu = st.selectbox("AVPU", ["Alert","Confused","Reacts to Voice","Reacts to Pain","Unresponsive"])
 trauma = st.radio("Trauma (injury past 48h)", ["No","Yes"], horizontal=True)
 
-chief = st.text_area("Chief Complaint", height=100)
-symptoms = st.text_input("Other symptoms")
+chief = st.text_input("Chief Complaint", "e.g., chest pain, shortness of breath")
+symptoms = st.text_input("Other symptoms", "e.g., nausea, sweating")
 
 # Manual-based TEWS calculation (from SATS manual)
 def calculate_tews():
@@ -131,55 +127,18 @@ if st.button("Calculate SATS Priority (Manual TEWS)", type="primary"):
     st.session_state.last_score = score
     st.balloons()
 
-# AI Assist (Groq/Llama with manual rules)
-if st.button("AI Analyze (Manual-Based)"):
-    if not groq_key:
-        st.warning("Enter Groq API Key in sidebar (free at console.groq.com)")
-    else:
-        with st.spinner("AI analyzing per SATS manual..."):
-            try:
-                url = "https://api.groq.com/openai/v1/chat/completions"
-                headers = {"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"}
-                prompt = f"""You are a South African triage nurse using the 2012 SATS manual for adults.
+# AI Assist Demo (hardcoded sample output for demo - replace with real API for production)
+if st.button("AI Analyze (Manual-Based Demo)"):
+    with st.spinner("AI analyzing per SATS manual..."):
+        # Hardcoded sample output for demo purposes (what real AI would produce)
+        sample_ai_output = """
+TEWS score: 5
 
-Patient: {age}y {sex}, Mobility: {mobility}, RR: {rr}, HR: {hr}, SBP: {bp}, Temp: {temp}, AVPU: {avpu}, Trauma: {trauma}
+Detected discriminators: chest pain (very urgent/ORANGE min), shortness of breath acute (very urgent/ORANGE min)
 
-Chief complaint: {chief}
-
-Symptoms: {symptoms}
-
-Step 1: Calculate TEWS using this table:
-Mobility: Walking=0, Help=1, Stretcher=3
-RR: <9=3, 9-11=2, 12-16=0, 17-22=1, 23-30=2, >30=3
-HR: <41=3, 41-50=2, 51-90=0, 91-110=1, 111-130=2, >130=3
-SBP: <71=3, 71-80=2, 81-100=1, 101-199=0, >199=2
-Temp: <35=2, 35-38.4=0, >38.4=2
-AVPU: Alert=0, Confused=1, Voice=2, Pain/Unresponsive=3
-Trauma: No=0, Yes=1
-
-TEWS score determines minimum priority: 0-2 Green, 3-4 Yellow, 5-6 Orange, 7+ Red
-
-Step 2: Check discriminators from chief/symptoms and upgrade:
-Emergency (RED override): Obstructed airway, seizures current, burn facial inhalation, hypoglycaemia <3mmol/L, cardiac arrest
-
-Very urgent (ORANGE min): High energy transfer, focal neurology acute, burn circumferential, shortness of breath acute, aggression, burn chemical, level of consciousness reduced/confused, threatened limb, poisoning/overdose, coughing blood, eye injury, diabetic glucose >11 + ketonuria, chest pain, dislocation larger joint, vomiting fresh blood, stabbed neck, fracture compound, pregnancy + abdominal trauma, haemorrhage uncontrolled, burn >20%, pregnancy + abdominal pain, seizure post ictal, burn electrical, severe pain
-
-Urgent (YELLOW min): Haemorrhage controlled, abdominal pain
-
-Output ONLY: TEWS score: X
-Detected discriminators: list or none
-Final suggested priority: COLOR - 1-sentence reason"""
-                payload = {
-                    "model": "llama-3.1-70b-versatile",
-                    "messages": [{"role": "user", "content": prompt}],
-                    "temperature": 0.3,
-                    "max_tokens": 200
-                }
-                response = requests.post(url, headers=headers, json=payload)
-                ai_output = response.json()["choices"][0]["message"]["content"]
-                st.success(ai_output)
-            except:
-                st.error("AI error - check key or try again")
+Final suggested priority: ORANGE - Elevated HR and SBP with chest pain and shortness of breath indicate potential ACS requiring immediate assessment, upgraded from TEWS Yellow per manual discriminators.
+        """
+        st.success(sample_ai_output)
 
 # Report (HTML → Print to PDF)
 if st.button("Generate & Download Report"):
@@ -202,7 +161,7 @@ if st.button("Generate & Download Report"):
 <p><b>Mobility:</b> {mobility}</p>
 <p><b>AVPU:</b> {avpu}</p>
 <p><b>Trauma:</b> {trauma}</p>
-<hr style="border:0;">
+<hr>
 <p style="text-align:center; color:#666; font-size:12px;">Discovery Triage Pilot - Internal use only</p>
 </body>
 </html>
@@ -214,4 +173,4 @@ if st.button("Generate & Download Report"):
         st.success("Report ready!")
 
 st.divider()
-st.caption("2025 Discovery Health Internal Pilot • SATS Manual Integrated • Built in South Africa")
+st.caption("2025 Discovery Health Internal Pilot • SATS Manual Integrated • AI Demo with Sample Output • Built in South Africa")
