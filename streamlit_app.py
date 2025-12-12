@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import json
 from datetime import datetime
+import os
 
 # ————————————————————————
 # Page config & styling
@@ -69,32 +70,40 @@ symptoms = st.text_input("Additional symptoms (comma-separated)", placeholder="n
 # ————————————————————————
 # AI Symptom Checker (Groq + Llama 3.1)
 # ————————————————————————
+# ← PASTE YOUR GROQ KEY HERE (get it free at console.groq.com/keys)
+GROQ_API_KEY = "gsk_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"  # Replace this!
+
 if st.button("Run AI Symptom Analysis"):
-    with st.spinner("Analysing with Llama 3.1…"):
-        try:
-            url = "https://api.groq.com/openai/v1/chat/completions"
-            headers = {
-                "Authorization": "Bearer gsk_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",  # ← free at groq.com
-                "Content-Type": "application/json"
-            }
-            prompt = f"""
-            You are an experienced South African emergency nurse.
-            Patient: {age} year old {male.lower()}, chief complaint: {chief_complaint}.
-            Symptoms: {symptoms}.
-            Vitals: RR {resp_rate}, HR {heart_rate}, BP {systolic_bp}, Temp {temperature}°C.
-            Give ONLY the likely SATS colour (RED / ORANGE / YELLOW / GREEN) and 1-sentence justification.
-            """
-            payload = {
-                "model": "llama-3.1-70b-versatile",
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.3,
-                "max_tokens": 100
-            }
-            response = requests.post(url, headers=headers, json=payload, timeout=20)
-            ai_result = response.json()["choices"][0]["message"]["content"]
-            st.success("AI Suggested Priority", ai_result)
-        except:
-            st.error("AI temporarily unavailable – using manual SATS only")
+    if GROQ_API_KEY == "gsk_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX":
+        st.warning("🚨 Quick setup: Get your free Groq API key at https://console.groq.com/keys and paste it above. Until then, here's a demo response:")
+        st.info("**AI Suggestion:** Based on chest pain and elevated HR, this suggests ORANGE priority – immediate nurse assessment for cardiac rule-out.")
+    else:
+        with st.spinner("Analysing with Llama 3.1…"):
+            try:
+                url = "https://api.groq.com/openai/v1/chat/completions"
+                headers = {
+                    "Authorization": f"Bearer {GROQ_API_KEY}",
+                    "Content-Type": "application/json"
+                }
+                prompt = f"""
+                You are an experienced South African emergency nurse.
+                Patient: {age} year old {male.lower()}, chief complaint: {chief_complaint}.
+                Symptoms: {symptoms}.
+                Vitals: RR {resp_rate}, HR {heart_rate}, BP {systolic_bp}, Temp {temperature}°C.
+                Give ONLY the likely SATS colour (RED / ORANGE / YELLOW / GREEN) and 1-sentence justification.
+                """
+                payload = {
+                    "model": "llama-3.1-70b-versatile",
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.3,
+                    "max_tokens": 100
+                }
+                response = requests.post(url, headers=headers, json=payload, timeout=20)
+                response.raise_for_status()  # Raises error for bad status
+                ai_result = response.json()["choices"][0]["message"]["content"]
+                st.success("AI Suggested Priority:", ai_result)
+            except Exception as e:
+                st.error(f"AI hiccup: {str(e)[:100]}... Check your key or try again.")
 
 # ————————————————————————
 # Simple SATS calculator (Western Cape 2024 adult version)
@@ -138,4 +147,4 @@ if st.button("Calculate SATS Priority", type="primary"):
 
 # Footer
 st.divider()
-st.caption("© 2025 Discovery Health Pilot • Built in South Africa • For internal demonstration only")
+st.caption("© 2025 Discovery Health Pilot • Built in South Africa • For internal
