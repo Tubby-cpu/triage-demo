@@ -1,139 +1,182 @@
 import streamlit as st
 import requests
-import json
 from datetime import datetime
-import os
+import base64
+from fpdf import FPDF
 
-# Page config & styling
-st.set_page_config(
-    page_title="Discovery Triage Pilot",
-    page_icon="🏥",
-    layout="centered",
-    initial_sidebar_state="expanded",
-)
+# ————————————————————————
+# Page config
+# ————————————————————————
+st.set_page_config(page_title="Discovery Triage Pilot", page_icon="hospital", layout="centered")
 
-# Discovery Health purple theme
+# Styling
 st.markdown("""
 <style>
-    .css-1d391kg {padding-top: 1rem;}
-    .stApp {background-color: #f8f5ff;}
     .big-font {font-size: 42px !important; font-weight: bold; color: #4B0082;}
     .purple {color: #4B0082;}
-    .stButton>button {background-color: #4B0082; color: white;}
+    .stButton>button {background-color: #4B0082; color: white; border-radius: 8px;}
+    .report-box {padding: 20px; border-left: 6px solid #4B0082; background-color: #f8f5ff;}
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown("<p class='big-font'>Discovery Triage Pilot</p>", unsafe_allow_html=True)
-st.markdown("<p class='purple'>AI-powered SATS + HealthID integration</p>", unsafe_allow_html=True)
+st.markdown("<p class='purple'>AI-powered SATS • HealthID • PDF Report</p>", unsafe_allow_html=True)
 
-# Sidebar – HealthID login (mock for now)
+# ————————————————————————
+# Session state initialisation
+# ————————————————————————
+if "history" not in st.session_state:
+    st.session_state.history = []
+if "current_patient" not in st.session_state:
+    st.session_state.current_patient = None
+
+# ————————————————————————
+# Sidebar – Patient lookup
+# ————————————————————————
 with st.sidebar:
-    st.image("https://upload.wikimedia.org/wikipedia/commons/9/9f/Discovery_Limited_Logo.svg", width=200)
+    st.image("https://upload.wikimedia.org/wikipedia/commons/9/9f/Discovery_Limited_Logo.svg", width=180)
     st.header("Patient Lookup")
-    health_id = st.text_input("Enter HealthID / ID Number", placeholder="e.g. 8203155017089")
-    
-    if st.button("Load Patient"):
-        if health_id:
-            st.success(f"Patient found: Member {health_id[:4]}****")
-            st.session_state.patient_id = health_id
+    health_id = st.text_input("HealthID / SA ID Number", placeholder="e.g. 8203155017089")
+
+    if st.button("Load Patient", type="primary"):
+        if health_id and len(health_id) >= 10):
+            # Mock patient data (replace with real HealthID API later)
+            mock_patients = {
+                "8203155017089": {"name": "Thabo Mokoena", "age": 42, "sex": "Male"},
+                "9112240123456": {"name": "Sarah Naidoo", "age": 31, "sex": "Female"},
+                "7509015888088": {"name": "Pieter van der Merwe", "age": 49, "sex": "Male"},
+            }
+            if health_id in mock_patients:
+                st.session_state.current_patient = mock_patients[health_id]
+                st.session_state.current_patient["health_id"] = health_id
+                st.success(f"Patient loaded: {mock_patients[health_id]['name']}")
+                st.rerun()
+            else:
+                # Fake success for any ID (great for demos)
+                st.session_state.current_patient = {
+                    "name": f"Member {health_id[-4:]}",
+                    "age": 35,
+                    "sex": "Unknown",
+                    "health_id": health_id
+                }
+                st.success(f"Patient loaded: {st.session_state.current_patient['name']}")
+                st.rerun()
         else:
-            st.warning("Please enter a valid HealthID")
+            st.error("Enter a valid ID")
+
+    if st.button("New Patient", type="secondary"):
+        st.session_state.current_patient = None
+        st.rerun()
 
     st.divider()
-    st.caption("Built for Discovery Primary Care & Employer Clinics")
+    st.subheader("Recent Patients")
+    for p in st.session_state.history[-5:]:
+        st.caption(f"{p['name']} • {p['priority']} • {p['time']}")
 
-# Main triage form
-st.header("Clinical Triage (SATS)")
+# ————————————————————————
+# Main form – only shows after patient loaded
+# ————————————————————————
+if st.session_state.current_patient is None:
+    st.info("Please load a patient using their HealthID to begin triage.")
+    st.stop()
+
+p = st.session_state.current_patient
+
+st.success(f"**Active Patient:** {p['name']} | Age: {p.get('age', '?')} | {p.get('sex', '?')} | HealthID ending …{p['health_id'][-4:]}")
 
 col1, col2 = st.columns(2)
 with col1:
-    age = st.number_input("Age (years)", min_value=0, max_value=120, value=35)
-    male = st.radio("Sex", ["Male", "Female", "Other"])
+    age = st.number_input("Age (years)", value=p.get("age", 35), min_value=0, max_value=120)
+    sex = st.radio("Sex", [" + p.get("sex", "Not loaded") + "]", ["Male", "Female", "Other"], horizontal=True)
 
 with col2:
-    mobility = st.selectbox("Mobility", ["Walks", "With help", "Stretcher / Immobile"])
-    resp_rate = st.slider("Respiratory Rate (breaths/min)", 5, 60, 20)
-    heart_rate = st.slider("Heart Rate (bpm)", 30, 200, 90)
-    systolic_bp = st.slider("Systolic BP (mmHg)", 50, 250, 120)
-    temperature = st.slider("Temperature (°C)", 30.0, 43.0, 36.8, 0.1)
+    mobility = st.selectbox("Mobility", ["Walks unaided", "With help", "Stretcher / Immobile"])
+    resp_rate = st.slider("Respiratory Rate", 5, 60, 22)
+    heart_rate = st.slider("Heart Rate", 30, 200, 88)
+    systolic_bp = st.slider("Systolic BP (mmHg)", 50, 250, 130)
+    temp = st.slider("Temperature (°C)", 30.0, 43.0, 37.0, 0.1)
 
-st.subheader("Chief Complaint & Symptoms")
-chief_complaint = st.text_area("Chief complaint", placeholder="e.g. Chest pain, shortness of breath, fever x 3 days")
-symptoms = st.text_input("Additional symptoms (comma-separated)", placeholder="nausea, vomiting, headache")
+chief = st.text_area("Chief Complaint", placeholder="e.g. Chest pain for 2 hours, radiating to left arm")
+symptoms = st.text_input("Other symptoms", placeholder="sweating, nausea, dizziness")
 
-# AI Symptom Checker (Groq + Llama 3.1)
-GROQ_API_KEY = "gsk_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"  # Replace with your free key from console.groq.com/keys
-
-if st.button("Run AI Symptom Analysis"):
-    if GROQ_API_KEY == "gsk_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX":
-        st.warning("Quick setup: Get your free Groq API key at https://console.groq.com/keys and paste it above. Until then, here's a demo response:")
-        st.info("**AI Suggestion:** Based on chest pain and elevated HR, this suggests ORANGE priority - immediate nurse assessment for cardiac rule-out.")
-    else:
-        with st.spinner("Analysing with Llama 3.1..."):
-            try:
-                url = "https://api.groq.com/openai/v1/chat/completions"
-                headers = {
-                    "Authorization": f"Bearer {GROQ_API_KEY}",
-                    "Content-Type": "application/json"
-                }
-                prompt = f"""
-                You are an experienced South African emergency nurse.
-                Patient: {age} year old {male.lower()}, chief complaint: {chief_complaint}.
-                Symptoms: {symptoms}.
-                Vitals: RR {resp_rate}, HR {heart_rate}, BP {systolic_bp}, Temp {temperature}°C.
-                Give ONLY the likely SATS colour (RED / ORANGE / YELLOW / GREEN) and 1-sentence justification.
-                """
-                payload = {
-                    "model": "llama-3.1-70b-versatile",
-                    "messages": [{"role": "user", "content": prompt}],
-                    "temperature": 0.3,
-                    "max_tokens": 100
-                }
-                response = requests.post(url, headers=headers, json=payload, timeout=20)
-                response.raise_for_status()
-                ai_result = response.json()["choices"][0]["message"]["content"]
-                st.success("AI Suggested Priority:", ai_result)
-            except Exception as e:
-                st.error(f"AI hiccup: {str(e)[:100]}... Check your key or try again.")
-
-# Simple SATS calculator (Western Cape 2024 adult version)
-def calculate_sats():
+# ————————————————————————
+# SATS Calculator
+# ————————————————————————
+def sats_score():
     score = 0
+    # Respiratory
     if resp_rate > 30 or resp_rate < 9: score += 3
-    elif resp_rate >= 25 or resp_rate <= 10: score += 2
-    elif resp_rate >= 22 or resp_rate <= 11: score += 1
-
+    elif resp_rate in range(25,31) or resp_rate in range(9,12): score += 2
+    elif resp_rate in range(22,25) or resp_rate in range(12,15): score += 1
+    # Heart rate
     if heart_rate > 140 or heart_rate < 40: score += 3
-    elif heart_rate >= 120 or heart_rate <= 50: score += 2
-    elif heart_rate >= 100 or heart_rate <= 60: score += 1
-
-    if systolic_bp > 220 or systolic_bp < 80: score += 3
-    elif systolic_bp >= 200 or systolic_bp <= 90: score += 2
-
-    if temperature >= 38.5 or temperature < 35: score += 2
-
-    if mobility in ["Stretcher / Immobile"]: score += 3
+    elif heart_rate >= 111: score += 2
+    elif heart_rate >= 101: score += 1
+    # BP
+    if systolic_bp < 90: score += 3
+    # Temperature
+    if temp >= 38.5 or temp < 35: score +=  += 2
+    # Mobility
+    if mobility == "Stretcher / Immobile": score += 3
     elif mobility == "With help": score += 1
-
-    # TEWS modifiers
-    if "unconscious" in chief_complaint.lower() or "seizure" in chief_complaint.lower(): score += 3
-    if "chest pain" in chief_complaint.lower(): score += 2
-    if "severe" in chief_complaint.lower() or "bleeding" in chief_complaint.lower(): score += 3
+    # Keywords
+    critical = ["unconscious", "seizure", "not breathing", "massive bleed"]
+    if any(word in chief.lower() for word in critical): score += 3
+    if "chest pain" in chief.lower(): score += 2
 
     if score >= 10: return "RED", "#ff0000"
-    elif score >= 7: return "ORANGE", "#ffa500"
+    elif score >= 7: return "ORANGE", "#ff8c00"
     elif score >= 4: return "YELLOW", "#ffff00"
     else: return "GREEN", "#00ff00"
 
 if st.button("Calculate SATS Priority", type="primary"):
-    priority, colour = calculate_sats()
-    st.markdown(f"""
-    <h2 style='color:{colour};text-align:center;'>
-        SATS PRIORITY: {priority}
-    </h2>
-    """, unsafe_allow_html=True)
+    priority, colour = sats_score()
+    st.markdown(f"<h1 style='color:{colour};text-align:center;'>SATS: {priority}</h1>", unsafe_allow_html=True)
+    st.session_state.last_priority = priority
     st.balloons()
 
-# Footer
+# ————————————————————————
+# Generate PDF Report
+# ————————————————————————
+def create_pdf():
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_font("Arial", size=12)
+    pdf.set_fill_color(75, 0, 130)
+    pdf.set_text_color(255,255,255)
+    pdf.cell(0, 10, "DISCOVERY HEALTH TRIAGE REPORT", ln=1, align="C", fill=True)
+    pdf.ln(8)
+    pdf.set_text_color(0,0,0)
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 8, f"Patient: {p['name']}   |   HealthID ending: ...{p['health_id'][-4:]}", ln=1)
+    pdf.cell(0, 8, f"Date & Time: {datetime.now().strftime('%Y-%m-%d %H:%M')}", ln=1)
+    pdf.cell(0, 8, f"Triage Priority: {st.session_state.get('last_priority', 'Not calculated')}", ln=1)
+    pdf.ln(5)
+    pdf.set_font("Arial", size=11)
+    pdf.multi_cell(0, 7, f"Chief complaint: {chief or 'Not recorded'}")
+    pdf.multi_cell(0, 7, f"Symptoms: {symptoms or 'None recorded'}")
+    pdf.multi_cell(0, 7, f"Vitals → RR {resp_rate} | HR {heart_rate} | BP {systolic_bp} | Temp {temp}°C")
+    pdf.multi_cell(0, 7, f"Mobility: {mobility}")
+    pdf.ln(5)
+    pdf.set_font("Arial", "I", 10)
+    pdf.cell(0, 8, "Generated by Discovery Triage Pilot • For internal use only", align="C")
+    return pdf.output(dest="S").encode("latin-1")
+
+if st.button("Generate & Download PDF Report"):
+    if "last_priority" not in st.session_state:
+        st.warning("Please calculate SATS priority first")
+    else:
+        pdf_bytes = create_pdf()
+        b64 = base64.b64encode(pdf_bytes).decode()
+        href = f'<a href="data:application/pdf;base64,{b64}" download="Triage_Report_{p["name"].replace(" ", "_")}.pdf">Click here to download PDF report</a>'
+        st.markdown(href, unsafe_allow_html=True)
+        # Save to history
+        st.session_state.history.append({
+            "name": p["name"],
+            "priority": st.session_state.last_priority,
+            "time": datetime.now().strftime("%H:%M")
+        })
+
 st.divider()
-st.caption("2025 Discovery Health Pilot. Built in South Africa. For internal demonstration only.")
+st.caption("2025 Discovery Health Internal Pilot • Built in South Africa • Not for clinical use yet")
