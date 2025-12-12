@@ -4,9 +4,7 @@ import json
 from datetime import datetime
 import os
 
-# ————————————————————————
 # Page config & styling
-# ————————————————————————
 st.set_page_config(
     page_title="Discovery Triage Pilot",
     page_icon="🏥",
@@ -28,9 +26,7 @@ st.markdown("""
 st.markdown("<p class='big-font'>Discovery Triage Pilot</p>", unsafe_allow_html=True)
 st.markdown("<p class='purple'>AI-powered SATS + HealthID integration</p>", unsafe_allow_html=True)
 
-# ————————————————————————
 # Sidebar – HealthID login (mock for now)
-# ————————————————————————
 with st.sidebar:
     st.image("https://upload.wikimedia.org/wikipedia/commons/9/9f/Discovery_Limited_Logo.svg", width=200)
     st.header("Patient Lookup")
@@ -46,9 +42,7 @@ with st.sidebar:
     st.divider()
     st.caption("Built for Discovery Primary Care & Employer Clinics")
 
-# ————————————————————————
 # Main triage form
-# ————————————————————————
 st.header("Clinical Triage (SATS)")
 
 col1, col2 = st.columns(2)
@@ -64,21 +58,18 @@ with col2:
     temperature = st.slider("Temperature (°C)", 30.0, 43.0, 36.8, 0.1)
 
 st.subheader("Chief Complaint & Symptoms")
-chief_complaint = st.text_area("Chief complaint", placeholder="e.g. Chest pain, shortness of breath, fever × 3 days")
+chief_complaint = st.text_area("Chief complaint", placeholder="e.g. Chest pain, shortness of breath, fever x 3 days")
 symptoms = st.text_input("Additional symptoms (comma-separated)", placeholder="nausea, vomiting, headache")
 
-# ————————————————————————
 # AI Symptom Checker (Groq + Llama 3.1)
-# ————————————————————————
-# ← PASTE YOUR GROQ KEY HERE (get it free at console.groq.com/keys)
-GROQ_API_KEY = "gsk_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"  # Replace this!
+GROQ_API_KEY = "gsk_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"  # Replace with your free key from console.groq.com/keys
 
 if st.button("Run AI Symptom Analysis"):
     if GROQ_API_KEY == "gsk_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX":
-        st.warning("🚨 Quick setup: Get your free Groq API key at https://console.groq.com/keys and paste it above. Until then, here's a demo response:")
-        st.info("**AI Suggestion:** Based on chest pain and elevated HR, this suggests ORANGE priority – immediate nurse assessment for cardiac rule-out.")
+        st.warning("Quick setup: Get your free Groq API key at https://console.groq.com/keys and paste it above. Until then, here's a demo response:")
+        st.info("**AI Suggestion:** Based on chest pain and elevated HR, this suggests ORANGE priority - immediate nurse assessment for cardiac rule-out.")
     else:
-        with st.spinner("Analysing with Llama 3.1…"):
+        with st.spinner("Analysing with Llama 3.1..."):
             try:
                 url = "https://api.groq.com/openai/v1/chat/completions"
                 headers = {
@@ -99,15 +90,13 @@ if st.button("Run AI Symptom Analysis"):
                     "max_tokens": 100
                 }
                 response = requests.post(url, headers=headers, json=payload, timeout=20)
-                response.raise_for_status()  # Raises error for bad status
+                response.raise_for_status()
                 ai_result = response.json()["choices"][0]["message"]["content"]
                 st.success("AI Suggested Priority:", ai_result)
             except Exception as e:
                 st.error(f"AI hiccup: {str(e)[:100]}... Check your key or try again.")
 
-# ————————————————————————
 # Simple SATS calculator (Western Cape 2024 adult version)
-# ————————————————————————
 def calculate_sats():
     score = 0
     if resp_rate > 30 or resp_rate < 9: score += 3
@@ -147,4 +136,4 @@ if st.button("Calculate SATS Priority", type="primary"):
 
 # Footer
 st.divider()
-st.caption("© 2025 Discovery Health Pilot • Built in South Africa • For internal
+st.caption("2025 Discovery Health Pilot. Built in South Africa. For internal demonstration only.")
