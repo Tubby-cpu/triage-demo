@@ -1,4 +1,3 @@
-
 import streamlit as st
 from datetime import datetime
 import base64
@@ -127,3 +126,47 @@ if st.button("Calculate SATS Priority", type="primary"):
     st.markdown(f"<h1 style='color:{colour};text-align:center;'>SATS: {priority}</h1>", unsafe_allow_html=True)
     st.session_state.last_priority = priority
     st.balloons()
+
+# ————————————————————————
+# PDF Report
+# ————————————————————————
+def create_pdf():
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Helvetica", "B", 18)
+    pdf.set_fill_color(75, 0, 130)
+    pdf.set_text_color(255,255,255)
+    pdf.cell(0, 15, "DISCOVERY HEALTH TRIAGE REPORT", ln=1, align="C", fill=True)
+    pdf.ln(10)
+    pdf.set_text_color(0,0,0)
+    pdf.set_font("Helvetica", size=12)
+    pdf.cell(0, 8, f"Patient     : {p['name']}", ln=1)
+    pdf.cell(0, 8, f"HealthID    : ending …{p['health_id'][-4:]}", ln=1)
+    pdf.cell(0, 8, f"Date & Time : {datetime.now().strftime('%Y-%m-%d %H:%M')}", ln=1)
+    pdf.cell(0, 8, f"Priority    : {st.session_state.get('last_priority', 'Not calculated')}", ln=1)
+    pdf.ln(8)
+    pdf.multi_cell(0, 7, f"Chief complaint : {chief or '—'}")
+    pdf.multi_cell(0, 7, f"Other symptoms  : {symptoms or '—'}")
+    pdf.multi_cell(0, 7, f"Vitals         : RR {resp_rate} | HR {heart_rate} | BP {systolic_bp} | Temp {temp}°C")
+    pdf.multi_cell(0, 7, f"Mobility       : {mobility}")
+    pdf.ln(10)
+    pdf.set_font("Helvetica", "I", 10)
+    pdf.cell(0, 8, "Discovery Triage Pilot – Internal use only", align="C")
+    return pdf.output(dest="S").encode("latin1")
+
+if st.button("Generate & Download PDF Report"):
+    if "last_priority" not in st.session_state:
+        st.warning("Please calculate SATS first")
+    else:
+        pdf_data = create_pdf()
+        b64 = base64.b64encode(pdf_data).decode()
+        href = f'<a href="data:application/pdf;base64,{b64}" download="Triage_{p["name"].replace(" ", "_")}.pdf">Download PDF Report</a>'
+        st.markdown(href, unsafe_allow_html=True)
+        st.session_state.history.append({
+            "name": p["name"],
+            "priority": st.session_state.last_priority,
+            "time": datetime.now().strftime("%H:%M")
+        })
+
+st.divider()
+st.caption("2025 Discovery Health Internal Pilot • Built in South Africa")
