@@ -42,16 +42,23 @@ st.info("Answer questions honestly. This is not medical advice—see a doctor if
 # Session state for question flow
 if "step" not in st.session_state: st.session_state.step = 0
 if "responses" not in st.session_state: st.session_state.responses = {}
+if "is_pediatric" not in st.session_state: st.session_state.is_pediatric = False
+if "pediatric_category" not in st.session_state: st.session_state.pediatric_category = None
 
 # Step 0: Basic info
 if st.session_state.step == 0:
     st.header("Welcome – Let's Start")
     name = st.text_input("Your Name")
-    age = st.number_input("Age", min_value=13, max_value=120, value=35)  # Adult only per manual
+    age = st.number_input("Age", min_value=0, max_value=120, value=35)
     sex = st.radio("Sex", ["Male","Female","Other"], horizontal=True)
     health_id = st.text_input("HealthID / SA ID (optional)", placeholder="e.g. 8203155017089")
+    height_cm = st.number_input("Height (cm, optional for children)", min_value=0, value=0)  # For pediatric check
     if st.button("Next"):
-        st.session_state.responses.update({"name": name, "age": age, "sex": sex, "health_id": health_id})
+        is_pediatric = age < 12 or height_cm < 150
+        pediatric_category = "younger" if height_cm <= 95 else "older" if is_pediatric else None
+        st.session_state.is_pediatric = is_pediatric
+        st.session_state.pediatric_category = pediatric_category
+        st.session_state.responses.update({"name": name, "age": age, "sex": sex, "health_id": health_id, "height_cm": height_cm})
         st.session_state.step = 1
         st.rerun()
 
@@ -68,6 +75,7 @@ if st.session_state.step == 1:
     facial_burn = st.radio("Facial burn with inhalation injury?", ["No","Yes"])
     low_sugar = st.radio("Low blood sugar (<3mmol/L) if diabetic?", ["No","Yes"])
     cardiac_arrest = st.radio("Cardiac arrest?", ["No","Yes"])
+    severe_dehydration = st.radio("Severe dehydration (sunken eyes, lethargic, no urine)?", ["No","Yes"]) if st.session_state.is_pediatric else "No"
 
     # Very urgent (ORANGE min)
     st.subheader("Very Urgent Signs 🟠")
@@ -95,6 +103,7 @@ if st.session_state.step == 1:
     seizure_post = st.radio("Post-seizure state?", ["No","Yes"])
     burn_electrical = st.radio("Electrical burn?", ["No","Yes"])
     severe_pain = st.radio("Severe pain?", ["No","Yes"])
+    moderate_dehydration = st.radio("Moderate dehydration (restless, thirsty)?", ["No","Yes"]) if st.session_state.is_pediatric else "No"
 
     # Urgent (YELLOW min)
     st.subheader("Urgent Signs 🟡")
@@ -104,8 +113,8 @@ if st.session_state.step == 1:
     if st.button("Next to Vitals"):
         st.session_state.responses.update({
             "chief": chief, "symptoms": symptoms,
-            "emergency": any([obstructed_airway=="Yes", seizure=="Yes", facial_burn=="Yes", low_sugar=="Yes", cardiac_arrest=="Yes"]),
-            "very_urgent": any([high_energy=="Yes", focal_neurology=="Yes", burn_circum=="Yes", sob_acute=="Yes", aggression=="Yes", burn_chemical=="Yes", loc_reduced=="Yes", threatened_limb=="Yes", poisoning=="Yes", coughing_blood=="Yes", eye_injury=="Yes", diabetic_high=="Yes", chest_pain=="Yes", dislocation=="Yes", vomiting_blood=="Yes", stabbed_neck=="Yes", fracture_compound=="Yes", preg_abd_trauma=="Yes", haemorrhage_unc=="Yes", burn_large=="Yes", preg_abd_pain=="Yes", seizure_post=="Yes", burn_electrical=="Yes", severe_pain=="Yes"]),
+            "emergency": any([obstructed_airway=="Yes", seizure=="Yes", facial_burn=="Yes", low_sugar=="Yes", cardiac_arrest=="Yes", severe_dehydration=="Yes"]),
+            "very_urgent": any([high_energy=="Yes", focal_neurology=="Yes", burn_circum=="Yes", sob_acute=="Yes", aggression=="Yes", burn_chemical=="Yes", loc_reduced=="Yes", threatened_limb=="Yes", poisoning=="Yes", coughing_blood=="Yes", eye_injury=="Yes", diabetic_high=="Yes", chest_pain=="Yes", dislocation=="Yes", vomiting_blood=="Yes", stabbed_neck=="Yes", fracture_compound=="Yes", preg_abd_trauma=="Yes", haemorrhage_unc=="Yes", burn_large=="Yes", preg_abd_pain=="Yes", seizure_post=="Yes", burn_electrical=="Yes", severe_pain=="Yes", moderate_dehydration=="Yes"]),
             "urgent": any([haemorrhage_con=="Yes", abd_pain=="Yes"])
         })
         st.session_state.step = 2
@@ -130,37 +139,72 @@ if st.session_state.step == 2:
 if st.session_state.step == 3:
     r = st.session_state.responses
 
-    # TEWS calculation
+    # TEWS calculation - Pediatric logic
     score = 0
-    # Mobility
     mobility = st.selectbox("Mobility (how did you arrive?)", ["Walking","With help","Stretcher / Immobile"])
     if mobility == "Stretcher / Immobile": score += 3
     elif mobility == "With help": score += 1
-    # RR
-    if r["rr"] < 9: score += 3
-    elif 9 <= r["rr"] <= 11: score += 2
-    elif 17 <= r["rr"] <= 22: score += 1
-    elif 23 <= r["rr"] <= 30: score += 2
-    elif r["rr"] > 30: score += 3
-    # HR
-    if r["hr"] < 41: score += 3
-    elif 41 <= r["hr"] <= 50: score += 2
-    elif 91 <= r["hr"] <= 110: score += 1
-    elif 111 <= r["hr"] <= 130: score += 2
-    elif r["hr"] > 130: score += 3
-    # SBP
-    if r["bp"] < 71: score += 3
-    elif 71 <= r["bp"] <= 80: score += 2
-    elif 81 <= r["bp"] <= 100: score += 1
-    elif r["bp"] > 199: score += 2
-    # Temp
+
+    if st.session_state.is_pediatric:
+        if st.session_state.pediatric_category == "younger":  # 50-95cm
+            # RR younger
+            if r["rr"] < 10 or r["rr"] > 60: score += 3
+            elif 10 <= r["rr"] <= 14 or 51 <= r["rr"] <= 59: score += 2
+            elif 15 <= r["rr"] <= 20 or 41 <= r["rr"] <= 50: score += 1
+            elif 21 <= r["rr"] <= 40: score += 0
+            # HR younger
+            if r["hr"] < 60 or r["hr"] > 180: score += 3
+            elif 60 <= r["hr"] <= 79 or 161 <= r["hr"] <= 179: score += 2
+            elif 80 <= r["hr"] <= 99 or 141 <= r["hr"] <= 160: score += 1
+            elif 100 <= r["hr"] <= 140: score += 0
+            # SBP younger
+            if r["bp"] < 50: score += 3
+            elif 50 <= r["bp"] <= 59: score += 2
+            elif 60 <= r["bp"] <= 69: score += 1
+            elif 70 <= r["bp"] <= 94: score += 0
+            elif r["bp"] > 94: score += 2
+        else:  # older 96-150cm
+            # RR older
+            if r["rr"] < 9 or r["rr"] > 30: score += 3
+            elif 9 <= r["rr"] <= 11 or 23 <= r["rr"] <= 30: score += 2
+            elif 12 <= r["rr"] <= 16: score += 0
+            elif 17 <= r["rr"] <= 22: score += 1
+            # HR older
+            if r["hr"] < 41 or r["hr"] > 130: score += 3
+            elif 41 <= r["hr"] <= 50 or 111 <= r["hr"] <= 130: score += 2
+            elif 51 <= r["hr"] <= 90: score += 0
+            elif 91 <= r["hr"] <= 110: score += 1
+            # SBP older
+            if r["bp"] < 71: score += 3
+            elif 71 <= r["bp"] <= 80: score += 2
+            elif 81 <= r["bp"] <= 100: score += 1
+            elif 101 <= r["bp"] <= 199: score += 0
+            elif r["bp"] > 199: score += 2
+    else:  # Adult TEWS (original)
+        if r["rr"] < 9: score += 3
+        elif 9 <= r["rr"] <= 11: score += 2
+        elif 12 <= r["rr"] <= 16: score += 0
+        elif 17 <= r["rr"] <= 22: score += 1
+        elif 23 <= r["rr"] <= 30: score += 2
+        elif r["rr"] > 30: score += 3
+        if r["hr"] < 41: score += 3
+        elif 41 <= r["hr"] <= 50: score += 2
+        elif 51 <= r["hr"] <= 90: score += 0
+        elif 91 <= r["hr"] <= 110: score += 1
+        elif 111 <= r["hr"] <= 130: score += 2
+        elif r["hr"] > 130: score += 3
+        if r["bp"] < 71: score += 3
+        elif 71 <= r["bp"] <= 80: score += 2
+        elif 81 <= r["bp"] <= 100: score += 1
+        elif 101 <= r["bp"] <= 199: score += 0
+        elif r["bp"] > 199: score += 2
+
+    # Common: Temp, AVPU, Trauma
     if r["temp"] < 35: score += 2
     elif r["temp"] > 38.4: score += 2
-    # AVPU
     if r["avpu"] == "Confused": score += 1
     elif r["avpu"] == "Reacts to Voice": score += 2
     elif r["avpu"] in ["Reacts to Pain","Unresponsive"]: score += 3
-    # Trauma
     if r["trauma"] == "Yes": score += 1
 
     # Base priority from TEWS
