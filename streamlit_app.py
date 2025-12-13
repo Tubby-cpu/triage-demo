@@ -2,19 +2,25 @@ import streamlit as st
 from datetime import datetime
 import base64
 
+# Page config
 st.set_page_config(page_title="QuickTriage SA - Self Triage", page_icon="🏥", layout="wide")
 
 st.markdown("""
 <style>
-    .big-font {font-size:42px !important; font-weight:bold; color:#4B0082;}
-    .purple {color:#4B0082;}
-    .stButton>button {background:#4B0082; color:white; border-radius:8px;}
-    .stAlert {border:2px solid #4B0082;}
+    [data-testid="stAppViewContainer"] {background: linear-gradient(to bottom, #003366, #66ccff); color: white;}
+    .big-font {font-size:42px !important; font-weight:bold; color:white;}
+    .blue {color:#003366;}
+    .stButton>button {background:#003366; color:white; border-radius:8px; border: none;}
+    .stAlert {border:2px solid #003366; background: rgba(255,255,255,0.8); color:#003366;}
+    .stTextInput > div > div > input, .stSlider > div {background:white; color:#003366;}
+    .stRadio > label, .stSelectbox > label {color:white;}
 </style>
 """, unsafe_allow_html=True)
 
+# Header with manual cover image (use your attached image URL or host it)
+st.image("https://your-hosted-image-url-for-sats-cover.jpg", use_column_width=True)  # Replace with ImgBB link to your attached image
 st.markdown("<p class='big-font'>QuickTriage SA</p>", unsafe_allow_html=True)
-st.markdown("<p class='purple'>Self-Triage for Faster Clinic Care (SATS-Based)</p>", unsafe_allow_html=True)
+st.markdown("<p style='color:white; font-size:20px;'>Self-Triage for Faster Clinic Care (SATS-Based)</p>", unsafe_allow_html=True)
 
 st.info("Answer questions honestly. This is not medical advice—see a doctor if unsure. For emergencies, call 10177.")
 
@@ -41,7 +47,7 @@ if st.session_state.step == 1:
     symptoms = st.text_input("Other symptoms?")
 
     # Emergency discriminators (RED override)
-    st.subheader("Emergency Signs")
+    st.subheader("Emergency Signs 🔴")
     obstructed_airway = st.radio("Difficulty breathing due to blocked airway?", ["No","Yes"])
     seizure = st.radio("Having a seizure now?", ["No","Yes"])
     facial_burn = st.radio("Facial burn with inhalation injury?", ["No","Yes"])
@@ -49,7 +55,7 @@ if st.session_state.step == 1:
     cardiac_arrest = st.radio("Cardiac arrest?", ["No","Yes"])
 
     # Very urgent (ORANGE min)
-    st.subheader("Very Urgent Signs")
+    st.subheader("Very Urgent Signs 🟠")
     high_energy = st.radio("High-energy injury (e.g., car crash)?", ["No","Yes"])
     focal_neurology = st.radio("Sudden weakness/numbness on one side?", ["No","Yes"])
     burn_circum = st.radio("Circumferential burn?", ["No","Yes"])
@@ -76,7 +82,7 @@ if st.session_state.step == 1:
     severe_pain = st.radio("Severe pain?", ["No","Yes"])
 
     # Urgent (YELLOW min)
-    st.subheader("Urgent Signs")
+    st.subheader("Urgent Signs 🟡")
     haemorrhage_con = st.radio("Controlled bleeding?", ["No","Yes"])
     abd_pain = st.radio("Abdominal pain?", ["No","Yes"])
 
@@ -90,7 +96,7 @@ if st.session_state.step == 1:
         st.session_state.step = 2
         st.rerun()
 
-# Step 2: Vitals (self-report)
+# Step 2: Vitals
 if st.session_state.step == 2:
     st.header("Vitals (Measure if possible)")
     rr = st.number_input("Respiratory Rate (breaths/min - count for 1 min)", min_value=0, value=12)
@@ -106,25 +112,24 @@ if st.session_state.step == 2:
         st.rerun()
 
 # Step 3: Compute & Show Priority
-if st.session_state.step = 3:
+if st.session_state.step == 3:
     r = st.session_state.responses
 
-    # TEWS calculation (exact from manual page 16)
+    # TEWS calculation
     score = 0
-    mobility = st.selectbox("Mobility (how did you arrive?)", ["Walking","With help","Stretcher / Immobile"])  # Add if not earlier
+    # Mobility (add here if not earlier)
+    mobility = st.selectbox("Mobility (how did you arrive?)", ["Walking","With help","Stretcher / Immobile"])
     if mobility == "Stretcher / Immobile": score += 3
     elif mobility == "With help": score += 1
     # RR
     if r["rr"] < 9: score += 3
     elif 9 <= r["rr"] <= 11: score += 2
-    elif 12 <= r["rr"] <= 16: score += 0
     elif 17 <= r["rr"] <= 22: score += 1
     elif 23 <= r["rr"] <= 30: score += 2
     elif r["rr"] > 30: score += 3
     # HR
     if r["hr"] < 41: score += 3
     elif 41 <= r["hr"] <= 50: score += 2
-    elif 51 <= r["hr"] <= 90: score += 0
     elif 91 <= r["hr"] <= 110: score += 1
     elif 111 <= r["hr"] <= 130: score += 2
     elif r["hr"] > 130: score += 3
@@ -132,7 +137,6 @@ if st.session_state.step = 3:
     if r["bp"] < 71: score += 3
     elif 71 <= r["bp"] <= 80: score += 2
     elif 81 <= r["bp"] <= 100: score += 1
-    elif 101 <= r["bp"] <= 199: score += 0
     elif r["bp"] > 199: score += 2
     # Temp
     if r["temp"] < 35: score += 2
@@ -167,7 +171,7 @@ if st.session_state.step = 3:
         # Mock nurse alert
         st.info("ALERT SENT TO NURSE: Patient {r['name']} green-coded, safe to leave.")
     else:
-        st.warning(f" {priority} - Please stay and see the doctor soon.")
+        st.warning(f"{priority} - Please stay and see the doctor soon.")
 
     # Report
     html = f"""
@@ -178,9 +182,10 @@ if st.session_state.step = 3:
 <p><b>Patient:</b> {r['name']}</p>
 <p><b>HealthID:</b> {r['health_id'] or '—'}</p>
 <p><b>Priority:</b> {priority} (TEWS: {score})</p>
-<p><b>Chief:</b> {chief or '—'}</p>
-<p><b>Symptoms:</b> {symptoms or '—'}</p>
+<p><b>Chief:</b> {r['chief'] or '—'}</p>
+<p><b>Symptoms:</b> {r['symptoms'] or '—'}</p>
 <p><b>Vitals:</b> RR {r['rr']} | HR {r['hr']} | BP {r['bp']} | Temp {r['temp']}°C</p>
+<p><b>Mobility:</b> {mobility}</p>
 <p><b>AVPU:</b> {r['avpu']}</p>
 <p><b>Trauma:</b> {r['trauma']}</p>
 </body>
@@ -196,24 +201,4 @@ if st.session_state.step = 3:
         st.rerun()
 
 st.divider()
-st.caption("QuickTriage SA – Reducing Clinic Waits • SATS Manual Compliant • 2025 Demo") 
-
-### 3. Business Strategy to Hit R1m+ Value/Sale
-- **Market Size & Opportunity**: SA digital health market is R15b+ ($840m) in 2025, mHealth apps growing to R10b ($574m) by 2030. Public clinics (8,000+) have average wait times of 3-4 hours; your app could cut non-urgent cases by 30% (based on Vula's success). NHI Phase 1 (2025) allocates R10b for primary care efficiency—position as partner.<grok-card data-id="8f1783" data-type="citation_card"></grok-card><grok-card data-id="4f50ed" data-type="citation_card"></grok-card><grok-card data-id="1a4b98" data-type="citation_card"></grok-card>
-- **Competitors**: Vula Mobile (referrals, 1m+ users), HealthConnect (WhatsApp bot for info), Clinitouch (remote monitoring). No direct self-triage for walk-ins—your edge is SATS compliance + patient self-service.<grok-card data-id="127f6d" data-type="citation_card"></grok-card><grok-card data-id="769917" data-type="citation_card"></grok-card><grok-card data-id="88fc11" data-type="citation_card"></grok-card>
-- **Monetization**:
-  - **SaaS Subscription**: R5k-10k/month per clinic (for alerts, analytics dashboard for admins).
-  - **Per-Patient Fee**: R20-50 per triage (government subsidy via NHI).
-  - **Upsell**: Premium for AI upgrades, integration with EMR systems.
-  - **Target**: Pilot in 5 Western Cape clinics (manual from Western Cape Govt), expand to 100+ via DoH tenders. At R10k/month x 100 clinics = R12m/year revenue.
-- **Valuation to R1m+**: SA health tech startups like HearX (audiology) sold for R500m+; yours could hit R1m-5m valuation with pilots + revenue. Bootstrap MVP, seek R500k seed from SA Innovation Fund or angel investors.
-- **Risks & Mitigation**: Liability (disclaim non-medical advice, get HPCSA approval). Privacy (POPIA compliant). Test with real users for accuracy.
-
-### 4. Next Steps to Launch & Sell
-1. **Deploy MVP**: Use the code above—test with friends simulating patients.
-2. **Pilot**: Approach 1-2 public clinics (e.g., via Western Cape DoH) for free trial. Collect data on wait time reduction.
-3. **Legal/Compliance**: Get SAHPRA registration as Class A software, POPIA audit (R50k cost).
-4. **Scale**: Migrate to Flutter for native mobile app. Integrate Twilio for real SMS alerts (free tier for demo).
-5. **Funding/Sale**: Join accelerators like LaunchLab or Grindstone. Pitch to investors at Africa Health Expo. Aim for acquisition by Discovery or DoH partner.
-
-This MVP is your starting point—it's sellable as-is for pilots. Let's refine based on feedback! What's your first step?
+st.caption("QuickTriage SA – Reducing Clinic Waits • SATS Manual Compliant • 2025 Demo")
