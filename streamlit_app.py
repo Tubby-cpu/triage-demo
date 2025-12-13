@@ -7,14 +7,19 @@ st.set_page_config(page_title="QuickTriage SA - Self Triage", page_icon="🏥", 
 
 st.markdown("""
 <style>
-    [data-testid="stAppViewContainer"] {background: #e6f2ff; color: #003366;}
+    [data-testid="stAppViewContainer"] {background: linear-gradient(to bottom, #003366, #66ccff); color: #003366;}
     .big-font {font-size:42px !important; font-weight:bold; color:#003366;}
-    .stButton>button {background:#4B0082; color:white; border-radius:20px; border: none; padding:10px 20px; font-size:16px; transition: all 0.3s;}
-    .stButton>button:hover {background:#30004f;}
-    .stAlert {background: white; color:#003366; border:1px solid #4B0082; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1);}
-    .stTextInput > div > div > input, .stSlider > div, .stSelectbox > div, .stRadio > div {background:white; color:#003366; border-radius:10px; box-shadow:0 1px 3px rgba(0,0,0,0.05); padding:10px;}
-    .stRadio > label, .stSelectbox > label {color:#003366; font-weight:bold;}
-    .stHeader, .stSubheader {color:#003366;}
+    .blue {color:#003366;}
+    .stButton>button {background:#003366; color:white; border-radius:8px; border: none;}
+    .stAlert {border:2px solid #003366; background: rgba(255,255,255,0.8); color:#003366;}
+    .stTextInput > div > div > input, .stSlider > div {background:white; color:#003366;}
+    .stRadio > label, .stSelectbox > label {color:#003366;}
+    
+    /* Enhanced card layouts */
+    .card {background: white; border-radius:12px; box-shadow:0 4px 8px rgba(0,0,0,0.1); padding:20px; margin-bottom:20px;}
+    
+    /* Headings dark for readability */
+    .stHeader, .stSubheader {color:#003366 !important;}
     
     /* Mobile-responsive adjustments */
     @media (max-width: 600px) {
@@ -25,10 +30,11 @@ st.markdown("""
         .stTextArea > div > textarea {height:100px !important;}
         .stHeader, .stSubheader {text-align:center;}
         [data-testid="stHorizontalBlock"] {flex-direction:column;}
+        .card {padding:15px; margin:10px;}
     }
     
     /* Sleek card style for sections */
-    .stExpander {background: white; color: #003366; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1); padding:15px;}
+    .stExpander {background: white; color: #003366; border-radius:12px; box-shadow:0 4px 8px rgba(0,0,0,0.1); padding:15px;}
     .stExpander > label {color:#003366; font-weight:bold;}
 </style>
 """, unsafe_allow_html=True)
@@ -44,84 +50,88 @@ if "responses" not in st.session_state: st.session_state.responses = {}
 if "is_pediatric" not in st.session_state: st.session_state.is_pediatric = False
 if "pediatric_category" not in st.session_state: st.session_state.pediatric_category = None
 
-# Step 0: Basic info
-if st.session_state.step == 0:
-    st.header("Welcome – Let's Start")
-    name = st.text_input("Your Name")
-    age = st.number_input("Age", min_value=0, max_value=120, value=35)
-    sex = st.radio("Sex", ["Male","Female","Other"], horizontal=True)
-    health_id = st.text_input("HealthID / SA ID (optional)", placeholder="e.g. 8203155017089")
-    height_cm = st.number_input("Height (cm, optional for children)", min_value=0, value=0)  # For pediatric check
-    if st.button("Next"):
-        is_pediatric = age < 12 or (height_cm > 0 and height_cm < 150)
-        pediatric_category = "younger" if height_cm <= 95 else "older" if is_pediatric else None
-        st.session_state.is_pediatric = is_pediatric
-        st.session_state.pediatric_category = pediatric_category
-        st.session_state.responses.update({"name": name, "age": age, "sex": sex, "health_id": health_id, "height_cm": height_cm})
-        st.session_state.step = 1
-        st.rerun()
+# Wrap sections in cards for sleek look
+with st.container():
+    st.markdown('<div class="card">', unsafe_allow_html=True)
 
-# Step 1: Chief complaint & symptom discriminators (yes/no flow from manual)
-if st.session_state.step == 1:
-    st.header("Symptoms Check (Yes/No)")
-    chief = st.text_area("What is your main problem today? (Chief Complaint)")
-    symptoms = st.text_input("Other symptoms?")
+    # Step 0: Basic info
+    if st.session_state.step == 0:
+        st.header("Welcome – Let's Start")
+        name = st.text_input("Your Name")
+        age = st.number_input("Age", min_value=0, max_value=120, value=35)
+        sex = st.radio("Sex", ["Male","Female","Other"], horizontal=True)
+        health_id = st.text_input("HealthID / SA ID (optional)", placeholder="e.g. 8203155017089")
+        height_cm = st.number_input("Height (cm, optional for children)", min_value=0, value=0)  # For pediatric check
+        if st.button("Next"):
+            is_pediatric = age < 12 or (height_cm > 0 and height_cm < 150)
+            pediatric_category = "younger" if height_cm <= 95 else "older" if is_pediatric else None
+            st.session_state.is_pediatric = is_pediatric
+            st.session_state.pediatric_category = pediatric_category
+            st.session_state.responses.update({"name": name, "age": age, "sex": sex, "health_id": health_id, "height_cm": height_cm})
+            st.session_state.step = 1
+            st.rerun()
 
-    # Emergency discriminators (RED override)
-    st.subheader("Emergency Signs 🔴")
-    obstructed_airway = st.radio("Difficulty breathing due to blocked airway?", ["No","Yes"])
-    seizure = st.radio("Having a seizure now?", ["No","Yes"])
-    facial_burn = st.radio("Facial burn with inhalation injury?", ["No","Yes"])
-    low_sugar = st.radio("Low blood sugar (<3mmol/L) if diabetic?", ["No","Yes"])
-    cardiac_arrest = st.radio("Cardiac arrest?", ["No","Yes"])
-    severe_dehydration = st.radio("Severe dehydration (sunken eyes, lethargic, no urine)?", ["No","Yes"]) if st.session_state.is_pediatric else "No"
+    # Step 1: Chief complaint & symptom discriminators (yes/no flow from manual)
+    if st.session_state.step == 1:
+        st.header("Symptoms Check (Yes/No)")
+        chief = st.text_area("What is your main problem today? (Chief Complaint)")
+        symptoms = st.text_input("Other symptoms?")
 
-    # Very urgent (ORANGE min)
-    st.subheader("Very Urgent Signs 🟠")
-    high_energy = st.radio("High-energy injury (e.g., car crash)?", ["No","Yes"])
-    focal_neurology = st.radio("Sudden weakness/numbness on one side?", ["No","Yes"])
-    burn_circum = st.radio("Circumferential burn?", ["No","Yes"])
-    sob_acute = st.radio("Sudden severe shortness of breath?", ["No","Yes"])
-    aggression = st.radio("Aggressive behavior?", ["No","Yes"])
-    burn_chemical = st.radio("Chemical burn?", ["No","Yes"])
-    loc_reduced = st.radio("Reduced consciousness or confusion?", ["No","Yes"])
-    threatened_limb = st.radio("Threatened limb (e.g., cold/pulseless)?", ["No","Yes"])
-    poisoning = st.radio("Poisoning or overdose?", ["No","Yes"])
-    coughing_blood = st.radio("Coughing up blood?", ["No","Yes"])
-    eye_injury = st.radio("Eye injury?", ["No","Yes"])
-    diabetic_high = st.radio("Diabetic with glucose >11mmol/L + ketones?", ["No","Yes"])
-    chest_pain = st.radio("Severe chest pain?", ["No","Yes"])
-    dislocation = st.radio("Dislocated large joint?", ["No","Yes"])
-    vomiting_blood = st.radio("Vomiting fresh blood?", ["No","Yes"])
-    stabbed_neck = st.radio("Stabbed in neck?", ["No","Yes"])
-    fracture_compound = st.radio("Open fracture?", ["No","Yes"])
-    preg_abd_trauma = st.radio("Pregnant with abdominal trauma?", ["No","Yes"])
-    haemorrhage_unc = st.radio("Uncontrolled bleeding?", ["No","Yes"])
-    burn_large = st.radio("Burn >20% body?", ["No","Yes"])
-    preg_abd_pain = st.radio("Pregnant with abdominal pain?", ["No","Yes"])
-    seizure_post = st.radio("Post-seizure state?", ["No","Yes"])
-    burn_electrical = st.radio("Electrical burn?", ["No","Yes"])
-    severe_pain = st.radio("Severe pain?", ["No","Yes"])
-    moderate_dehydration = st.radio("Moderate dehydration (restless, thirsty)?", ["No","Yes"]) if st.session_state.is_pediatric else "No"
+        # Emergency discriminators (RED override)
+        st.subheader("Emergency Signs 🔴")
+        obstructed_airway = st.radio("Difficulty breathing due to blocked airway?", ["No","Yes"])
+        seizure = st.radio("Having a seizure now?", ["No","Yes"])
+        facial_burn = st.radio("Facial burn with inhalation injury?", ["No","Yes"])
+        low_sugar = st.radio("Low blood sugar (<3mmol/L) if diabetic?", ["No","Yes"])
+        cardiac_arrest = st.radio("Cardiac arrest?", ["No","Yes"])
+        severe_dehydration = st.radio("Severe dehydration (sunken eyes, lethargic, no urine)?", ["No","Yes"]) if st.session_state.is_pediatric else "No"
 
-    # Urgent (YELLOW min)
-    st.subheader("Urgent Signs 🟡")
-    haemorrhage_con = st.radio("Controlled bleeding?", ["No","Yes"])
-    abd_pain = st.radio("Abdominal pain?", ["No","Yes"])
+        # Very urgent (ORANGE min)
+        st.subheader("Very Urgent Signs 🟠")
+        high_energy = st.radio("High-energy injury (e.g., car crash)?", ["No","Yes"])
+        focal_neurology = st.radio("Sudden weakness/numbness on one side?", ["No","Yes"])
+        burn_circum = st.radio("Circumferential burn?", ["No","Yes"])
+        sob_acute = st.radio("Sudden severe shortness of breath?", ["No","Yes"])
+        aggression = st.radio("Aggressive behavior?", ["No","Yes"])
+        burn_chemical = st.radio("Chemical burn?", ["No","Yes"])
+        loc_reduced = st.radio("Reduced consciousness or confusion?", ["No","Yes"])
+        threatened_limb = st.radio("Threatened limb (e.g., cold/pulseless)?", ["No","Yes"])
+        poisoning = st.radio("Poisoning or overdose?", ["No","Yes"])
+        coughing_blood = st.radio("Coughing up blood?", ["No","Yes"])
+        eye_injury = st.radio("Eye injury?", ["No","Yes"])
+        diabetic_high = st.radio("Diabetic with glucose >11mmol/L + ketones?", ["No","Yes"])
+        chest_pain = st.radio("Severe chest pain?", ["No","Yes"])
+        dislocation = st.radio("Dislocated large joint?", ["No","Yes"])
+        vomiting_blood = st.radio("Vomiting fresh blood?", ["No","Yes"])
+        stabbed_neck = st.radio("Stabbed in neck?", ["No","Yes"])
+        fracture_compound = st.radio("Open fracture?", ["No","Yes"])
+        preg_abd_trauma = st.radio("Pregnant with abdominal trauma?", ["No","Yes"])
+        haemorrhage_unc = st.radio("Uncontrolled bleeding?", ["No","Yes"])
+        burn_large = st.radio("Burn >20% body?", ["No","Yes"])
+        preg_abd_pain = st.radio("Pregnant with abdominal pain?", ["No","Yes"])
+        seizure_post = st.radio("Post-seizure state?", ["No","Yes"])
+        burn_electrical = st.radio("Electrical burn?", ["No","Yes"])
+        severe_pain = st.radio("Severe pain?", ["No","Yes"])
+        moderate_dehydration = st.radio("Moderate dehydration (restless, thirsty)?", ["No","Yes"]) if st.session_state.is_pediatric else "No"
 
-    if st.button("Next to Vitals"):
-        st.session_state.responses.update({
-            "chief": chief, "symptoms": symptoms,
-            "emergency": any([obstructed_airway=="Yes", seizure=="Yes", facial_burn=="Yes", low_sugar=="Yes", cardiac_arrest=="Yes", severe_dehydration=="Yes"]),
-            "very_urgent": any([high_energy=="Yes", focal_neurology=="Yes", burn_circum=="Yes", sob_acute=="Yes", aggression=="Yes", burn_chemical=="Yes", loc_reduced=="Yes", threatened_limb=="Yes", poisoning=="Yes", coughing_blood=="Yes", eye_injury=="Yes", diabetic_high=="Yes", chest_pain=="Yes", dislocation=="Yes", vomiting_blood=="Yes", stabbed_neck=="Yes", fracture_compound=="Yes", preg_abd_trauma=="Yes", haemorrhage_unc=="Yes", burn_large=="Yes", preg_abd_pain=="Yes", seizure_post=="Yes", burn_electrical=="Yes", severe_pain=="Yes", moderate_dehydration=="Yes"]),
-            "urgent": any([haemorrhage_con=="Yes", abd_pain=="Yes"])
-        })
-        st.session_state.step = 2
-        st.rerun()
+        # Urgent (YELLOW min)
+        st.subheader("Urgent Signs 🟡")
+        haemorrhage_con = st.radio("Controlled bleeding?", ["No","Yes"])
+        abd_pain = st.radio("Abdominal pain?", ["No","Yes"])
+
+        if st.button("Next to Vitals"):
+            st.session_state.responses.update({
+                "chief": chief, "symptoms": symptoms,
+                "emergency": any([obstructed_airway=="Yes", seizure=="Yes", facial_burn=="Yes", low_sugar=="Yes", cardiac_arrest=="Yes", severe_dehydration=="Yes"]),
+                "very_urgent": any([high_energy=="Yes", focal_neurology=="Yes", burn_circum=="Yes", sob_acute=="Yes", aggression=="Yes", burn_chemical=="Yes", loc_reduced=="Yes", threatened_limb=="Yes", poisoning=="Yes", coughing_blood=="Yes", eye_injury=="Yes", diabetic_high=="Yes", chest_pain=="Yes", dislocation=="Yes", vomiting_blood=="Yes", stabbed_neck=="Yes", fracture_compound=="Yes", preg_abd_trauma=="Yes", haemorrhage_unc=="Yes", burn_large=="Yes", preg_abd_pain=="Yes", seizure_post=="Yes", burn_electrical=="Yes", severe_pain=="Yes", moderate_dehydration=="Yes"]),
+                "urgent": any([haemorrhage_con=="Yes", abd_pain=="Yes"])
+            })
+            st.session_state.step = 2
+            st.rerun()
 
 # Step 2: Vitals
 if st.session_state.step == 2:
-    st.header("Vitals (Measure if possible")
+    st.header("Vitals (Measure if possible)")
     rr = st.number_input("Respiratory Rate (breaths/min - count for 1 min)", min_value=0, value=12)
     hr = st.number_input("Heart Rate (bpm - feel pulse for 1 min)", min_value=0, value=80)
     bp = st.number_input("Systolic BP (mmHg - if you have a monitor)", min_value=0, value=120)
