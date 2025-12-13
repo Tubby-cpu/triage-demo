@@ -7,13 +7,14 @@ st.set_page_config(page_title="QuickTriage SA - Self Triage", page_icon="🏥", 
 
 st.markdown("""
 <style>
-    [data-testid="stAppViewContainer"] {background: linear-gradient(to bottom, #003366, #66ccff); color: white;}
-    .big-font {font-size:42px !important; font-weight:bold; color:white;}
-    .blue {color:#003366;}
-    .stButton>button {background:#003366; color:white; border-radius:8px; border: none;}
-    .stAlert {border:2px solid #003366; background: rgba(255,255,255,0.8); color:#003366;}
-    .stTextInput > div > div > input, .stSlider > div {background:white; color:#003366;}
-    .stRadio > label, .stSelectbox > label {color:white;}
+    [data-testid="stAppViewContainer"] {background: #e6f2ff; color: #003366;}
+    .big-font {font-size:42px !important; font-weight:bold; color:#003366;}
+    .stButton>button {background:#4B0082; color:white; border-radius:20px; border: none; padding:10px 20px; font-size:16px; transition: all 0.3s;}
+    .stButton>button:hover {background:#30004f;}
+    .stAlert {background: white; color:#003366; border:1px solid #4B0082; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1);}
+    .stTextInput > div > div > input, .stSlider > div, .stSelectbox > div, .stRadio > div {background:white; color:#003366; border-radius:10px; box-shadow:0 1px 3px rgba(0,0,0,0.05); padding:10px;}
+    .stRadio > label, .stSelectbox > label {color:#003366; font-weight:bold;}
+    .stHeader, .stSubheader {color:#003366;}
     
     /* Mobile-responsive adjustments */
     @media (max-width: 600px) {
@@ -27,14 +28,15 @@ st.markdown("""
     }
     
     /* Sleek card style for sections */
-    .stExpander {background: white; color: #003366; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); padding:10px;}
+    .stExpander {background: white; color: #003366; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1); padding:15px;}
+    .stExpander > label {color:#003366; font-weight:bold;}
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown("<p class='big-font'>QuickTriage SA</p>", unsafe_allow_html=True)
-st.markdown("<p style='color:white; font-size:20px;'>Self-Triage for Faster Clinic Care (SATS-Based)</p>", unsafe_allow_html=True)
+st.markdown("<p style='color:#003366; font-size:20px;'>Self-Triage for Faster Clinic Care (SATS-Based)</p>", unsafe_allow_html=True)
 
-st.info("Answer questions honestly. This is not medical advice—see a doctor if unsure. For emergencies, call 10177. This app is designed with NHI compliance in mind, ensuring data privacy (POPIA) and accessibility for all users.")
+st.info("Answer questions honestly. This is not medical advice—see a doctor if unsure. For emergencies, call 10177. This app is NHI-compliant, adhering to POPIA for data privacy and supporting universal healthcare access.")
 
 # Session state for question flow
 if "step" not in st.session_state: st.session_state.step = 0
@@ -119,7 +121,7 @@ if st.session_state.step == 1:
 
 # Step 2: Vitals
 if st.session_state.step == 2:
-    st.header("Vitals (Measure if possible)")
+    st.header("Vitals (Measure if possible")
     rr = st.number_input("Respiratory Rate (breaths/min - count for 1 min)", min_value=0, value=12)
     hr = st.number_input("Heart Rate (bpm - feel pulse for 1 min)", min_value=0, value=80)
     bp = st.number_input("Systolic BP (mmHg - if you have a monitor)", min_value=0, value=120)
@@ -257,4 +259,4 @@ if st.session_state.step == 3:
         st.rerun()
 
 st.divider()
-st.caption("QuickTriage SA – Reducing Clinic Waits • SATS Manual Compliant • 2025 Demo")
+st.caption("QuickTriage SA – Reducing Clinic Waits • SATS Manual Compliant • 2025 Demo")23s
