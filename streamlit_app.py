@@ -7,26 +7,28 @@ st.set_page_config(page_title="QuickTriage SA - Self Triage", page_icon="🏥", 
 
 st.markdown("""
 <style>
-    [data-testid="stAppViewContainer"] {background: linear-gradient(to bottom, #003366, #66ccff); color: white;}
-    .big-font {font-size:42px !important; font-weight:bold; color:white;}
-    .blue {color:#003366;}
-    .stButton>button {background:#003366; color:white; border-radius:8px; border: none;}
-    .stAlert {border:2px solid #003366; background: rgba(255,255,255,0.8); color:#003366;}
-    .stTextInput > div > div > input, .stSlider > div {background:white; color:#003366;}
-    .stRadio > label, .stSelectbox > label {color:white;}
+    [data-testid="stAppViewContainer"] {background: #f0f4f8; color: #003366;}
+    .big-font {font-size:42px !important; font-weight:bold; color:#003366;}
+    .stButton>button {background:#003366; color:white; border-radius:8px; border: none; transition: all 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
+    .stButton>button:hover {background:#004488; box-shadow: 0 4px 8px rgba(0,0,0,0.2);}
+    .stExpander {background:white; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding:10px;}
+    .stAlert {background: rgba(102,204,255,0.2); color:#003366; border:1px solid #66ccff; border-radius:8px;}
+    .stTextInput > div > div > input, .stSlider > div {background:white; color:#003366; border-radius:8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);}
+    .stRadio > label, .stSelectbox > label {color:#003366;}
+    .stProgress > div > div > div {background:#003366;}
 </style>
 """, unsafe_allow_html=True)
 
-# Header with SATS manual cover image (real URL from public source)
-st.image("https://image.slidesharecdn.com/satsmanuala5lrspreads-220630165019-e182e441/75/SATS-Manual-A5-LR-spreads-pdf-1-2048.jpg", use_column_width=True)
-st.markdown("<p class='big-font'>QuickTriage SA</p>", unsafe_allow_html=True)
-st.markdown("<p style='color:white; font-size:20px;'>Self-Triage for Faster Clinic Care (SATS-Based)</p>", unsafe_allow_html=True)
+st.markdown("<p class='big-font'>QuickTriage SA 🚑</p>", unsafe_allow_html=True)
+st.markdown("<p style='color:#003366; font-size:20px;'>Self-Triage for Faster Clinic Care (SATS-Based)</p>", unsafe_allow_html=True)
 
 st.info("Answer questions honestly. This is not medical advice—see a doctor if unsure. For emergencies, call 10177.")
 
 # Session state for question flow
 if "step" not in st.session_state: st.session_state.step = 0
 if "responses" not in st.session_state: st.session_state.responses = {}
+
+progress = st.progress(st.session_state.step / 3)
 
 # Step 0: Basic info
 if st.session_state.step == 0:
@@ -40,51 +42,48 @@ if st.session_state.step == 0:
         st.session_state.step = 1
         st.rerun()
 
-# Step 1: Chief complaint & symptom discriminators (yes/no flow from manual)
+# Step 1: Chief complaint & symptom discriminators
 if st.session_state.step == 1:
     st.header("Symptoms Check (Yes/No)")
     chief = st.text_area("What is your main problem today? (Chief Complaint)")
     symptoms = st.text_input("Other symptoms?")
 
-    # Emergency discriminators (RED override)
-    st.subheader("Emergency Signs 🔴")
-    obstructed_airway = st.radio("Difficulty breathing due to blocked airway?", ["No","Yes"])
-    seizure = st.radio("Having a seizure now?", ["No","Yes"])
-    facial_burn = st.radio("Facial burn with inhalation injury?", ["No","Yes"])
-    low_sugar = st.radio("Low blood sugar (<3mmol/L) if diabetic?", ["No","Yes"])
-    cardiac_arrest = st.radio("Cardiac arrest?", ["No","Yes"])
+    with st.expander("Emergency Signs 🔴"):
+        obstructed_airway = st.radio("Difficulty breathing due to blocked airway?", ["No","Yes"])
+        seizure = st.radio("Having a seizure now?", ["No","Yes"])
+        facial_burn = st.radio("Facial burn with inhalation injury?", ["No","Yes"])
+        low_sugar = st.radio("Low blood sugar (<3mmol/L) if diabetic?", ["No","Yes"])
+        cardiac_arrest = st.radio("Cardiac arrest?", ["No","Yes"])
 
-    # Very urgent (ORANGE min)
-    st.subheader("Very Urgent Signs 🟠")
-    high_energy = st.radio("High-energy injury (e.g., car crash)?", ["No","Yes"])
-    focal_neurology = st.radio("Sudden weakness/numbness on one side?", ["No","Yes"])
-    burn_circum = st.radio("Circumferential burn?", ["No","Yes"])
-    sob_acute = st.radio("Sudden severe shortness of breath?", ["No","Yes"])
-    aggression = st.radio("Aggressive behavior?", ["No","Yes"])
-    burn_chemical = st.radio("Chemical burn?", ["No","Yes"])
-    loc_reduced = st.radio("Reduced consciousness or confusion?", ["No","Yes"])
-    threatened_limb = st.radio("Threatened limb (e.g., cold/pulseless)?", ["No","Yes"])
-    poisoning = st.radio("Poisoning or overdose?", ["No","Yes"])
-    coughing_blood = st.radio("Coughing up blood?", ["No","Yes"])
-    eye_injury = st.radio("Eye injury?", ["No","Yes"])
-    diabetic_high = st.radio("Diabetic with glucose >11mmol/L + ketones?", ["No","Yes"])
-    chest_pain = st.radio("Severe chest pain?", ["No","Yes"])
-    dislocation = st.radio("Dislocated large joint?", ["No","Yes"])
-    vomiting_blood = st.radio("Vomiting fresh blood?", ["No","Yes"])
-    stabbed_neck = st.radio("Stabbed in neck?", ["No","Yes"])
-    fracture_compound = st.radio("Open fracture?", ["No","Yes"])
-    preg_abd_trauma = st.radio("Pregnant with abdominal trauma?", ["No","Yes"])
-    haemorrhage_unc = st.radio("Uncontrolled bleeding?", ["No","Yes"])
-    burn_large = st.radio("Burn >20% body?", ["No","Yes"])
-    preg_abd_pain = st.radio("Pregnant with abdominal pain?", ["No","Yes"])
-    seizure_post = st.radio("Post-seizure state?", ["No","Yes"])
-    burn_electrical = st.radio("Electrical burn?", ["No","Yes"])
-    severe_pain = st.radio("Severe pain?", ["No","Yes"])
+    with st.expander("Very Urgent Signs 🟠"):
+        high_energy = st.radio("High-energy injury (e.g., car crash)?", ["No","Yes"])
+        focal_neurology = st.radio("Sudden weakness/numbness on one side?", ["No","Yes"])
+        burn_circum = st.radio("Circumferential burn?", ["No","Yes"])
+        sob_acute = st.radio("Sudden severe shortness of breath?", ["No","Yes"])
+        aggression = st.radio("Aggressive behavior?", ["No","Yes"])
+        burn_chemical = st.radio("Chemical burn?", ["No","Yes"])
+        loc_reduced = st.radio("Reduced consciousness or confusion?", ["No","Yes"])
+        threatened_limb = st.radio("Threatened limb (e.g., cold/pulseless)?", ["No","Yes"])
+        poisoning = st.radio("Poisoning or overdose?", ["No","Yes"])
+        coughing_blood = st.radio("Coughing up blood?", ["No","Yes"])
+        eye_injury = st.radio("Eye injury?", ["No","Yes"])
+        diabetic_high = st.radio("Diabetic with glucose >11mmol/L + ketones?", ["No","Yes"])
+        chest_pain = st.radio("Severe chest pain?", ["No","Yes"])
+        dislocation = st.radio("Dislocated large joint?", ["No","Yes"])
+        vomiting_blood = st.radio("Vomiting fresh blood?", ["No","Yes"])
+        stabbed_neck = st.radio("Stabbed in neck?", ["No","Yes"])
+        fracture_compound = st.radio("Open fracture?", ["No","Yes"])
+        preg_abd_trauma = st.radio("Pregnant with abdominal trauma?", ["No","Yes"])
+        haemorrhage_unc = st.radio("Uncontrolled bleeding?", ["No","Yes"])
+        burn_large = st.radio("Burn >20% body?", ["No","Yes"])
+        preg_abd_pain = st.radio("Pregnant with abdominal pain?", ["No","Yes"])
+        seizure_post = st.radio("Post-seizure state?", ["No","Yes"])
+        burn_electrical = st.radio("Electrical burn?", ["No","Yes"])
+        severe_pain = st.radio("Severe pain?", ["No","Yes"])
 
-    # Urgent (YELLOW min)
-    st.subheader("Urgent Signs 🟡")
-    haemorrhage_con = st.radio("Controlled bleeding?", ["No","Yes"])
-    abd_pain = st.radio("Abdominal pain?", ["No","Yes"])
+    with st.expander("Urgent Signs 🟡"):
+        haemorrhage_con = st.radio("Controlled bleeding?", ["No","Yes"])
+        abd_pain = st.radio("Abdominal pain?", ["No","Yes"])
 
     if st.button("Next to Vitals"):
         st.session_state.responses.update({
@@ -117,7 +116,7 @@ if st.session_state.step == 3:
 
     # TEWS calculation
     score = 0
-    # Mobility (add here if not earlier)
+    # Mobility
     mobility = st.selectbox("Mobility (how did you arrive?)", ["Walking","With help","Stretcher / Immobile"])
     if mobility == "Stretcher / Immobile": score += 3
     elif mobility == "With help": score += 1
