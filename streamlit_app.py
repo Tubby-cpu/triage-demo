@@ -3,7 +3,7 @@ from datetime import datetime
 import base64
 
 # Page config
-st.set_page_config(page_title="QuickTriage SA - Self Triage", page_icon="🏥", layout="centered")
+st.set_page_config(page_title="QuickTriage SA - Self Triage", page_icon="🏥", layout="wide")
 
 st.markdown("""
 <style>
@@ -24,6 +24,7 @@ st.markdown("""
         .stTextArea > div > textarea {height:100px !important;}
         .stHeader, .stSubheader {text-align:center;}
         [data-testid="stHorizontalBlock"] {flex-direction:column;}
+        st.image {width:100% !important;}
     }
     
     /* Sleek card style for sections */
@@ -31,6 +32,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Integrated SATS manual cover image as header
+st.image("https://image.slidesharecdn.com/satsmanuala5lrspreads-220630165019-e182e441/75/SATS-Manual-A5-LR-spreads-pdf-1-2048.jpg", use_column_width=True)
 st.markdown("<p class='big-font'>QuickTriage SA</p>", unsafe_allow_html=True)
 st.markdown("<p style='color:white; font-size:20px;'>Self-Triage for Faster Clinic Care (SATS-Based)</p>", unsafe_allow_html=True)
 
@@ -213,4 +216,4 @@ if st.session_state.step == 3:
         st.rerun()
 
 st.divider()
-st.caption("QuickTriage SA – Reducing Clinic Waits • SATS Manual Compliant • 2025 Demo")
+st.caption("QuickTriage SA – Reducing Clinic Waits • SATS Manual Compliant • 2025 Demo")18.3s
