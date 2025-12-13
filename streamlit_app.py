@@ -216,4 +216,4 @@ if st.session_state.step == 3:
         st.rerun()
 
 st.divider()
-st.caption("QuickTriage SA – Reducing Clinic Waits • SATS Manual Compliant • 2025 Demo")18.3s
+st.caption("QuickTriage SA – Reducing Clinic Waits • SATS Manual Compliant • 2025 Demo")
