@@ -17,8 +17,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Header with manual cover image (use your attached image URL or host it)
-st.image("https://your-hosted-image-url-for-sats-cover.jpg", use_column_width=True)  # Replace with ImgBB link to your attached image
+# Header with SATS manual cover image (real URL from public source)
+st.image("https://image.slidesharecdn.com/satsmanuala5lrspreads-220630165019-e182e441/75/SATS-Manual-A5-LR-spreads-pdf-1-2048.jpg", use_column_width=True)
 st.markdown("<p class='big-font'>QuickTriage SA</p>", unsafe_allow_html=True)
 st.markdown("<p style='color:white; font-size:20px;'>Self-Triage for Faster Clinic Care (SATS-Based)</p>", unsafe_allow_html=True)
 
