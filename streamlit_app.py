@@ -24,7 +24,6 @@ st.markdown("""
         .stTextArea > div > textarea {height:100px !important;}
         .stHeader, .stSubheader {text-align:center;}
         [data-testid="stHorizontalBlock"] {flex-direction:column;}
-        st.image {width:100% !important;}
     }
     
     /* Sleek card style for sections */
@@ -32,12 +31,10 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Integrated SATS manual cover image as header
-st.image("https://image.slidesharecdn.com/satsmanuala5lrspreads-220630165019-e182e441/75/SATS-Manual-A5-LR-spreads-pdf-1-2048.jpg", use_column_width=True)
 st.markdown("<p class='big-font'>QuickTriage SA</p>", unsafe_allow_html=True)
 st.markdown("<p style='color:white; font-size:20px;'>Self-Triage for Faster Clinic Care (SATS-Based)</p>", unsafe_allow_html=True)
 
-st.info("Answer questions honestly. This is not medical advice—see a doctor if unsure. For emergencies, call 10177.")
+st.info("Answer questions honestly. This is not medical advice—see a doctor if unsure. For emergencies, call 10177. This app is designed with NHI compliance in mind, ensuring data privacy (POPIA) and accessibility for all users.")
 
 # Session state for question flow
 if "step" not in st.session_state: st.session_state.step = 0
@@ -54,7 +51,7 @@ if st.session_state.step == 0:
     health_id = st.text_input("HealthID / SA ID (optional)", placeholder="e.g. 8203155017089")
     height_cm = st.number_input("Height (cm, optional for children)", min_value=0, value=0)  # For pediatric check
     if st.button("Next"):
-        is_pediatric = age < 12 or height_cm < 150
+        is_pediatric = age < 12 or (height_cm > 0 and height_cm < 150)
         pediatric_category = "younger" if height_cm <= 95 else "older" if is_pediatric else None
         st.session_state.is_pediatric = is_pediatric
         st.session_state.pediatric_category = pediatric_category
